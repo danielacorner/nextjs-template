@@ -1,30 +1,35 @@
 import { useMitt } from 'react-mitt'
-import { useEffectOnce } from 'react-use'
+import { useEffectOnce, useRafState } from 'react-use'
 import { EMITTER } from '../../constants/emitter'
-import { Mouse } from '../../store'
+import useStore, { Mouse } from '../../store'
 
-const useMouseDown = (callback: (mouse: Mouse) => void): void => {
+type Callback = (mouse: Mouse) => void
+
+const useMouseEvent = (emitterType: 'mouseDown' | 'mouseMove' | 'mouseUp', callback?: Callback) => {
   const { emitter } = useMitt()
+  const initialMouse = useStore((state) => state.mutation.mouse)
+  const [mouse, set] = useRafState(initialMouse)
   useEffectOnce(() => {
-    emitter.on(EMITTER.mouseDown, callback)
-    return () => void emitter.off(EMITTER.mouseDown, callback)
+    const handle = (mouse: Mouse) => {
+      set(mouse)
+      callback?.(mouse)
+    }
+    emitter.on(EMITTER[emitterType], handle)
+    return () => void emitter.off(EMITTER[emitterType], handle)
   })
+  return mouse
 }
 
-const useMouseMove = (callback: (mouse: Mouse) => void): void => {
-  const { emitter } = useMitt()
-  useEffectOnce(() => {
-    emitter.on(EMITTER.mouseMove, callback)
-    return () => void emitter.off(EMITTER.mouseMove, callback)
-  })
+const useMouseDown = (callback?: Callback): Mouse => {
+  return useMouseEvent('mouseDown', callback)
 }
 
-const useMouseUp = (callback: (mouse: Mouse) => void): void => {
-  const { emitter } = useMitt()
-  useEffectOnce(() => {
-    emitter.on(EMITTER.mouseUp, callback)
-    return () => void emitter.off(EMITTER.mouseUp, callback)
-  })
+const useMouseMove = (callback?: Callback): Mouse => {
+  return useMouseEvent('mouseMove', callback)
+}
+
+const useMouseUp = (callback?: (mouse: Mouse) => void): Mouse => {
+  return useMouseEvent('mouseUp', callback)
 }
 
 export { useMouseDown, useMouseMove, useMouseUp }
